@@ -1,0 +1,289 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Windows 환경 pyenv-win & Jupyter 개발 환경 가이드</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --primary: #0284c7;
+      --border: #e2e8f0;
+      --code-bg: #0f172a;
+      --code-text: #f8fafc;
+      --callout-bg: #eff6ff;
+      --callout-border: #3b82f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 30px 16px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      color: #0f172a;
+      font-size: 1.75rem;
+    }
+    header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1.3rem;
+      border-bottom: 2px solid #e0f2fe;
+      padding-bottom: 8px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      color: #334155;
+      margin: 18px 0 8px 0;
+    }
+    p, ul, ol {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+    }
+    ul, ol {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #334155;
+      font-weight: 600;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin: 10px 0 14px 0;
+    }
+    code {
+      font-family: Consolas, Monaco, monospace;
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .callout {
+      background-color: var(--callout-bg);
+      border-left: 4px solid var(--callout-border);
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Windows pyenv-win & Jupyter 개발 환경 구축 완벽 가이드</h1>
+      <p>사내망 SSL 인증서 처리, pyenv-win 설치 및 기본 명령어, VS Code 연동 가이드</p>
+    </header>
+
+    <section>
+      <h2>1. macOS vs Windows 환경 차이 및 사내망 인증서 등록</h2>
+      <p>macOS에서는 <code>brew install pyenv</code>를 실행하지만, Windows 네이티브 환경에서는 Bash 기반의 원본 대신 Windows 전용 포크인 <strong><code>pyenv-win</code></strong>을 사용합니다.</p>
+      
+      <div class="callout">
+        <strong>사내망 SSL 오류 원인:</strong> 사내 방화벽/프록시 환경에서는 자체 루트 CA 인증서가 신뢰 저장소에 없으면 <code>0x8a15005e</code>(서버 인증서 불일치) 오류가 발생합니다.
+      </div>
+
+      <h3>사내 루트 CA 인증서 등록 (관리자 권한 PowerShell)</h3>
+      <pre><code>Import-Certificate -FilePath "C:\certs\LG-CNS-Root-CA.cer" -CertStoreLocation Cert:\LocalMachine\Root</code></pre>
+      <p>실행 결과 화면에 <code>Thumbprint</code>와 <code>Subject</code>가 출력되면 정상적으로 등록된 것입니다.</p>
+    </section>
+
+    <section>
+      <h2>2. pyenv-win 공식 설치 및 환경 변수 설정</h2>
+      <p>공식 GitHub(pyenv/pyenv)에서 권장하는 원클릭 설치 스크립트를 실행합니다.</p>
+
+      <h3>설치 스크립트 실행 (PowerShell)</h3>
+      <pre><code>Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1" -OutFile "./install-pyenv-win.ps1"; &amp;"./install-pyenv-win.ps1"
+Remove-Item ./install-pyenv-win.ps1</code></pre>
+
+      <h3>설치 후 확인 및 문제 해결</h3>
+      <ul>
+        <li>스크립트 완료 후 <strong>열려 있는 PowerShell 창을 완전히 닫고 다시 실행</strong>합니다.</li>
+        <li>만약 <code>pyenv</code> 명령어가 인식되지 않는다면 수동으로 환경 변수를 설정합니다:</li>
+      </ul>
+      <pre><code>[System.Environment]::SetEnvironmentVariable('PYENV', "$HOME\.pyenv\pyenv-win", 'User')
+[System.Environment]::SetEnvironmentVariable('PYENV_ROOT', "$HOME\.pyenv\pyenv-win", 'User')
+[System.Environment]::SetEnvironmentVariable('PYENV_HOME', "$HOME\.pyenv\pyenv-win", 'User')
+
+$userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+$pyenvPaths = "$HOME\.pyenv\pyenv-win\bin;$HOME\.pyenv\pyenv-win\shims"
+[System.Environment]::SetEnvironmentVariable('Path', "$pyenvPaths;$userPath", 'User')</code></pre>
+      <p>정상 확인 명령어: <code>pyenv --version</code></p>
+    </section>
+
+    <section>
+      <h2>3. pyenv 핵심 사용법 및 명령어 가이드</h2>
+
+      <h3>명령어 요약 표</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>명령어</th>
+            <th>용도</th>
+            <th>비고 / 윈도우 팁</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pyenv install --list</code></td>
+            <td>설치 가능한 모든 파이썬 목록 확인</td>
+            <td>특정 버전 필터: <code>| Select-String 3.14</code></td>
+          </tr>
+          <tr>
+            <td><code>pyenv install &lt;버전&gt;</code></td>
+            <td>특정 파이썬 버전 다운로드 및 설치</td>
+            <td>일반 64비트는 접미사 없는 버전 선택 (예: <code>3.14.5</code>)</td>
+          </tr>
+          <tr>
+            <td><code>pyenv versions</code></td>
+            <td>로컬에 설치된 파이썬 버전 목록 조회</td>
+            <td>현재 활성화된 버전 옆에 <code>*</code> 표시</td>
+          </tr>
+          <tr>
+            <td><code>pyenv global &lt;버전&gt;</code></td>
+            <td>시스템 전체 기본 파이썬 버전 지정</td>
+            <td><code>%USERPROFILE%\.pyenv\pyenv-win\version</code>에 저장됨</td>
+          </tr>
+          <tr>
+            <td><code>pyenv local &lt;버전&gt;</code></td>
+            <td>현재 작업 디렉터리 전용 버전 지정</td>
+            <td>해당 폴더에 <code>.python-version</code> 파일 생성됨</td>
+          </tr>
+          <tr>
+            <td><code>pyenv shell &lt;버전&gt;</code></td>
+            <td>현재 열려 있는 터미널 세션에만 임시 적용</td>
+            <td>환경 변수 <code>PYENV_VERSION</code>을 수정</td>
+          </tr>
+          <tr>
+            <td><code>pyenv rehash</code></td>
+            <td>실행 링크(shims) 파일 갱신</td>
+            <td>새 버전 설치 또는 pip 글로벌 실행 파일 설치 후 필수</td>
+          </tr>
+          <tr>
+            <td><code>pyenv uninstall &lt;버전&gt;</code></td>
+            <td>설치된 파이썬 버전 삭제</td>
+            <td><code>versions</code> 디렉터리에서 해당 버전 폴더 제거</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Python 3.14.5 설치 및 활성화 단계</h3>
+      <pre><code># 1. 64비트 정식 버전 설치
+pyenv install 3.14.5
+
+# 2. shims 갱신
+pyenv rehash
+
+# 3. 글로벌 기본 버전 지정
+pyenv global 3.14.5
+
+# 4. 버전 확인
+python --version</code></pre>
+    </section>
+
+    <section>
+      <h2>4. VS Code &amp; Jupyter Notebook 연동</h2>
+      
+      <h3>1) Python 인터프리터 선택</h3>
+      <ol>
+        <li>VS Code에서 <code>Ctrl + Shift + P</code> (명령 팔레트)를 누릅니다.</li>
+        <li><code>Python: Select Interpreter</code>를 입력하고 실행합니다.</li>
+        <li>목록에서 <code>Python 3.14.5 ('3.14.5': pyenv)</code>를 선택합니다.</li>
+      </ol>
+
+      <h3>2) 새 Jupyter Notebook 파일 생성</h3>
+      <ol>
+        <li><code>Ctrl + Shift + P</code>를 누르고 <code>Create: New Jupyter Notebook</code>을 실행합니다.</li>
+        <li><code>Untitled-1.ipynb</code> 파일이 열립니다.</li>
+      </ol>
+
+      <h3>3) ipykernel 설치</h3>
+      <p>VS Code 터미널(<code>Ctrl + ~</code>)에서 해당 환경에 <code>ipykernel</code> 패키지를 설치합니다.</p>
+      <pre><code># 일반 환경
+python -m pip install ipykernel
+
+# 사내망 SSL 인증서 지정이 필요한 경우
+python -m pip install --cert "C:\certs\LG-CNS-Root-CA.cer" ipykernel
+
+# shims 갱신
+pyenv rehash</code></pre>
+
+      <h3>4) 노트북 커널 연결 및 동작 검증</h3>
+      <p>노트북 우측 상단의 <strong>Select Kernel</strong> → <strong>Python Environments</strong> → <strong>Python 3.14.5</strong>를 선택한 뒤 첫 번째 코드 셀에서 실행합니다:</p>
+      <pre><code>import sys
+print("인터프리터 경로:", sys.executable)
+print("파이썬 버전:", sys.version)</code></pre>
+      <p>출력 결과의 경로가 <code>.pyenv\pyenv-win\versions\3.14.5\python.exe</code>로 나타나면 모든 구성이 정상 완료된 것입니다.</p>
+    </section>
+
+    <div class="footer">
+      <p>참고 문서: <a href="https://github.com/pyenv-win/pyenv-win" target="_blank" style="color: var(--primary);">pyenv-win 공식 GitHub</a> | <a href="https://code.visualstudio.com/docs/datascience/jupyter-notebooks" target="_blank" style="color: var(--primary);">VS Code Jupyter 공식 가이드</a></p>
+    </div>
+  </div>
+</body>
+</html>
